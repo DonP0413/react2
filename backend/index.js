@@ -8,36 +8,46 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// CAMBIO IMPORTANTE: Usamos createPool en lugar de createConnection
+// CONFIGURACIÓN ROBUSTA (ANTI-CAÍDAS)
 const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     waitForConnections: true,
-    connectionLimit: 10, // Mantiene hasta 10 conexiones vivas
-    queueLimit: 0
+    connectionLimit: 10,
+    queueLimit: 0,
+    // ESTO ES LO NUEVO Y MÁGICO:
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
 });
 
-// Ya no necesitamos db.connect() manual, el pool lo maneja solo.
-console.log('✅ Pool de conexiones configurado');
+// Verificador de conexión inicial (Opcional, solo para logs)
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ Error conectando al Pool:', err.message);
+    } else {
+        console.log('✅ Conexión exitosa al Pool de Clever Cloud');
+        connection.release(); // Liberamos la conexión inmediatamente
+    }
+});
 
-// Ruta de prueba
 app.get('/', (req, res) => {
-    res.send('Backend funcionando con Pool de conexiones 🚀');
+    res.send('API Backend activa y resistiendo desconexiones 🛡️');
 });
 
 app.post('/api/guardar', (req, res) => {
     const { nombre, email } = req.body;
     const sql = 'INSERT INTO usuarios (nombre, email) VALUES (?, ?)';
     
-    // El uso es idéntico, pero ahora es resistente a desconexiones
     db.query(sql, [nombre, email], (err, result) => {
         if (err) {
-            console.error('Error en query:', err);
-            return res.status(500).send('Error al guardar en BD');
+            console.error('❌ Error insertando datos:', err);
+            // Si el error es de conexión cerrada, intentamos responder amablemente
+            return res.status(500).json({ error: 'Error de conexión con base de datos', detalle: err.message });
         }
-        res.send('Usuario registrado con éxito');
+        console.log('✅ Usuario registrado:', nombre);
+        res.status(200).json({ message: 'Usuario registrado con éxito' });
     });
 });
 
