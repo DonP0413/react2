@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import { useState } from 'react'
 import './App.css'
 
@@ -18,8 +17,8 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Hacemos la petición al Backend
-      const response = await fetch('http://localhost:3000/api/guardar', {
+      // Hacemos la petición al Backend en RENDER
+      const response = await fetch('https://react2-ihu0.onrender.com/api/guardar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
